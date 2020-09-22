@@ -9,6 +9,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.jclouds.openstack.nova.v2_0.domain.Server;
+import org.jclouds.openstack.nova.v2_0.extensions.VolumeAttachmentApi;
 import org.jclouds.openstack.nova.v2_0.features.ServerApi;
 import org.jclouds.openstack.nova.v2_0.options.CreateServerOptions;
 import org.jclouds.openstack.v2_0.domain.Resource;
@@ -56,6 +57,8 @@ public class OpenstackCloudImage implements CloudImage {
     @NotNull
     private final String flavorName;
     @NotNull
+    private final int volumeSize;
+    @NotNull
     private final boolean autoFloatingIp;
     @NotNull
     private final CreateServerOptions options;
@@ -74,7 +77,7 @@ public class OpenstackCloudImage implements CloudImage {
     private CloudErrorInfo errorInfo = null;
 
     public OpenstackCloudImage(@NotNull final OpenstackApi openstackApi, @NotNull final String imageId, @NotNull final String imageName,
-            @NotNull final String openstackImageName, @NotNull final String flavorId, @NotNull boolean autoFloatingIp,
+            @NotNull final String openstackImageName, @NotNull final String flavorId, @NotNull final int volumeSize, @NotNull boolean autoFloatingIp,
             @NotNull final CreateServerOptions options, @Nullable final String userScriptPath, @NotNull final ServerPaths serverPaths,
             @NotNull final ScheduledExecutorService executor) {
         this.openstackApi = openstackApi;
@@ -82,6 +85,7 @@ public class OpenstackCloudImage implements CloudImage {
         this.imageName = imageName;
         this.openstackImageName = openstackImageName;
         this.flavorName = flavorId;
+	this.volumeSize = volumeSize;
         this.autoFloatingIp = autoFloatingIp;
         this.options = options;
         this.userScriptPath = userScriptPath;
@@ -198,6 +202,11 @@ public class OpenstackCloudImage implements CloudImage {
     @NotNull
     public String getFlavorId() {
         return openstackApi.getFlavorIdByName(flavorName);
+    }
+
+    @NotNull
+    public int getVolumeSize() {
+        return volumeSize;
     }
 
     @NotNull

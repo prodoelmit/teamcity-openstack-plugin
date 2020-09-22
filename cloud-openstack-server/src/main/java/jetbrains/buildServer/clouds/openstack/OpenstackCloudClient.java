@@ -69,32 +69,41 @@ public class OpenstackCloudClient extends BuildServerAdapter implements CloudCli
         LOG.debug(String.format("Using the following YAML data: %s", rawYaml));
 
         Yaml yaml = new Yaml();
-        final Map<String, Map<String, String>> map = yaml.load(rawYaml);
+        final Map<String, Map<String, Object>> map = yaml.load(rawYaml);
         if (map == null || map.isEmpty()) {
             errorInfo = new CloudErrorInfo("No images specified (perhaps only comments)");
             return;
         }
 
         final StringBuilder error = new StringBuilder();
-        for (Map.Entry<String, Map<String, String>> entry : map.entrySet()) {
+        for (Map.Entry<String, Map<String, Object>> entry : map.entrySet()) {
             final String imageName = entry.getKey().trim();
             if (entry.getValue() == null) {
                 errorInfo = new CloudErrorInfo(String.format("No parameters defined for image: %s", imageName));
                 return;
             }
-            final String openstackImageName = StringUtil.trim(entry.getValue().get("image"));
-            final String flavorName = StringUtil.trim(entry.getValue().get("flavor"));
-            final String networkName = StringUtil.trim(entry.getValue().get("network"));
-            final String securityGroupName = StringUtil.trim(entry.getValue().get("security_group"));
-            final String keyPair = StringUtil.trim(entry.getValue().get("key_pair"));
-            final String userScriptPath = entry.getValue().get("user_script");
-            Boolean autoFloatingIp = (Boolean) (Object) entry.getValue().get("auto_floating_ip"); // Evil, but Yaml parse Boolean only for this
+	    final Map<String, Object> obj = entry.getValue();
+            final String openstackImageName = StringUtil.trim(obj.get("image").toString());
+            final String flavorName = StringUtil.trim(obj.get("flavor").toString());
+            final String networkName = StringUtil.trim(obj.get("network").toString());
+            final String securityGroupName = StringUtil.trim(obj.get("security_group").toString());
+            final String keyPair = StringUtil.trim(obj.get("key_pair").toString());
+            final String userScriptPath = obj.getOrDefault("user_script", "").toString();
+            int volumeSize;
+	    try {
+		    volumeSize = (int) obj.getOrDefault("volume_size",0);
+	    }
+	    catch (Exception e)
+	    {
+		    volumeSize = 0;
+	    }
+            Boolean autoFloatingIp = (Boolean) (Object) obj.get("auto_floating_ip"); // Evil, but Yaml parse Boolean only for this
             autoFloatingIp = ObjectUtils.chooseNotNull(autoFloatingIp, false); // Can be null if not defined
 
             String networkId = openstackApi.getNetworkIdByName(networkName);
             CreateServerOptions options = new CreateServerOptions().keyPairName(keyPair).securityGroupNames(securityGroupName).networks(networkId);
 
-            final String availabilityZone = entry.getValue().get("availability_zone");
+            final String availabilityZone = entry.getValue().getOrDefault("availability_zone","").toString();
             if (!Strings.isNullOrEmpty(availabilityZone)) {
                 options.availabilityZone(availabilityZone.trim());
             }
@@ -105,7 +114,7 @@ public class OpenstackCloudClient extends BuildServerAdapter implements CloudCli
 
             LOG.info(String.format("Create image  [%s] ...", imageName));
             final OpenstackCloudImage image = new OpenstackCloudImage(openstackApi, imageName /* imageIdGenerator.next() */, imageName,
-                    openstackImageName, flavorName, autoFloatingIp, options, userScriptPath, serverPaths, factory.createExecutorService(imageName));
+                    openstackImageName, flavorName, volumeSize, autoFloatingIp, options, userScriptPath, serverPaths, factory.createExecutorService(imageName));
 
             cloudImages.add(image);
 

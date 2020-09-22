@@ -5,10 +5,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
+import java.util.HashSet;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.jclouds.openstack.nova.v2_0.domain.Server;
+import org.jclouds.openstack.nova.v2_0.domain.BlockDeviceMapping;
 import org.jclouds.openstack.nova.v2_0.domain.ServerCreated;
 import org.jclouds.openstack.nova.v2_0.options.CreateServerOptions;
 import org.jetbrains.annotations.NotNull;
@@ -268,8 +270,28 @@ public class OpenstackCloudInstance implements CloudInstance {
                     options.userData(readUserScriptFile(userScriptFile)).configDrive(true);
                 }
 
+		if (cloudImage.getVolumeSize() > 0) {
+                    LOG.debug(String.format("Attaching net volume of size %d", cloudImage.getVolumeSize()));
+			HashSet<BlockDeviceMapping> mappings = new HashSet<BlockDeviceMapping>(options.getBlockDeviceMappings());
+			mappings.add(BlockDeviceMapping.builder()
+					.uuid(openstackImageId)
+					.deviceType("disk")
+					.volumeSize(cloudImage.getVolumeSize())
+					.sourceType("image")
+					.destinationType("volume")
+					.deviceName("/dev/sda")
+					.diskBus("scsi")
+					.bootIndex(0)
+					.deleteOnTermination(true)
+					.build()
+						);
+			options.blockDeviceMappings(mappings);	
+		}
+
+
                 LOG.debug(String.format("Creating openstack instance with flavorId=%s, imageId=%s, options=%s", flavorId, openstackImageId, options));
                 serverCreated = cloudImage.getNovaServerApi().create(getName(), openstackImageId, flavorId, options);
+
 
                 if (cloudImage.isAutoFloatingIp()) {
                     LOG.debug(String.format("Associating floating ip to serverId %s", serverCreated.getId()));

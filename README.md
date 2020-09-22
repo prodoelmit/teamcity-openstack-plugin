@@ -40,6 +40,7 @@ You can specify idle time on the agent cloud profile, after which the instance s
 | *auto_floating_ip*  | false        | Boolean (`false` by default) for [floating ip](https://docs.openstack.org/ocata/user-guide/cli-manage-ip-addresses.html) association ; first from pool used |
 | *user_script*       | false        | Script executed on instance start |
 | *availability_zone* | false        | Region for server instance (if not the global configured)
+| *volume_size* | false        | Size of block device which will be created and attached to your server (if it is greater than zero)
 
 ### OpenStack v2 Identity
 
